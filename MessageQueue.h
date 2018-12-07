@@ -16,6 +16,10 @@ namespace Event
 			MessageQueue():count(0)
 			{
 			}
+			const size_t Count(void)const
+			{
+				return count;
+			}
 			const xstring GetInfo(void)
 			{
 				int size = 0;

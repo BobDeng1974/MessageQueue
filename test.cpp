@@ -10,32 +10,6 @@ MQManager mq;
 int event = 0;
 int countx = 0;
 
-class TimeDiff: public Mutex
-{
-	private:
-		TimeValue last;
-		TimeValue now;
-	public:
-		size_t Diff(void)
-		{
-			time_t diff;
-
-			Lock();
-			now.Update();
-			now -= last;
-			diff = now.Second() * 1000000 + now.Usecond();
-			Unlock();
-
-			return diff;
-		}
-		void Update(void)
-		{
-			Lock();
-			last.Update();
-			Unlock();
-		}
-};
-
 TimeDiff td;
 
 class Test : public EventListener
@@ -59,13 +33,19 @@ class Test : public EventListener
 		}
 		void ProcMessage()
 		{
+			xstring s;
+
+		   if( td.Diff() > 1000000)
+		   {
+			  s.format("mq.count(%d).timediff(%d).div(%d)", mq.Count(), mq.DiffTime(), mq.Count()/(mq.DiffTime()/1000000));
+		   }
 			Lock();
 			while(!queue.empty())
 			{
 				Message &m = queue.front();
-				if(td.Diff() > 1000000 )
+				if(td.Diff() > 1000000 && s.length() > 10)
 				{
-					printf("[%lx].m(%lx, %d).%s\n", pthread_self(), m.id, m.event, m.data.data());
+					printf("[%lx].m(%lx, %d).%s.%s\n", pthread_self(), m.id, m.event, m.data.data(), s.data());
 					td.Update();
 				}
 				queue.pop_front();
@@ -75,14 +55,17 @@ class Test : public EventListener
 
 };
 
+int event_max = 100;
 void *thread(void *p)
 {
 	Test test;
-	int e = event++;
-	int count = 0;
 	TimeValue last;
 
-	mq.Listen(e%5, test);
+	for(int i = 0; i < event_max; i += random() % 10)
+	{
+		mq.Listen(random() % event_max, test);
+		srandom(last.Usecond());
+	}
 
 	while(1)
 	{
@@ -91,11 +74,9 @@ void *thread(void *p)
 		{
 			Message m;
 			m.id = pthread_self();
-			m.event = random()%5;
+			m.event = random()%event_max;
+			m.data = "jjjjjjjjjjjjjjjjjjjjjjjjjjlajflajfkajfljasdlfjalskdfjafjkajflajsdlfkjaslkdfjjkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk88888";
 			TimeValue now;
-			xstring s = mq.GetInfo();
-			if(count++ % 100 == 0)
-				m.data.format("time(%lu,%lu).mq(%s)", now.Second(), now.Usecond(), s.data());
 			srandom(now.Usecond());
 			mq.SendMessage(m);
 			last.Update();
@@ -104,10 +85,11 @@ void *thread(void *p)
 		usleep(1);
 	}
 }
+int thread_max = 20;
 int main(void)
 {
 
-	for(int i = 0; i < 10; i++)
+	for(int i = 0; i < thread_max; i++)
 	{
 		pthread_t tid = 0;
 		pthread_create(&tid, 0, thread, 0);

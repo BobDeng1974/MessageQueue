@@ -36,7 +36,10 @@ namespace Event
 				Lock();
 				for(iterator i = queue.begin(); i != queue.end(); i++)
 				{
-					i->second.Dispatch(m);
+					if(i->first == m.event)
+					{
+						i->second.Dispatch(m);
+					}
 				}
 				Unlock();
 			}
