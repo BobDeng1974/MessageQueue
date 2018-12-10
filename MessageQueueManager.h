@@ -1,6 +1,5 @@
 #ifndef __EVENT_MESSAGEQUEUEMANAGER_H__
 #define __EVENT_MESSAGEQUEUEMANAGER_H__
-#include "TimeValue.h"
 #include "EventQueue.h"
 #include "MessageQueue.h"
 
@@ -9,30 +8,13 @@ namespace Event
 	class MessageQueueManager : public Mutex
 	{
 		protected:
-			TimeValue timeValue;
 			EventQueue eventQueue;
 			MessageQueue messageQueue;
 			MessageQueueManager(void){}
 		public:
-			const TimeValue& GetTime(void)const
-			{
-				return timeValue;
-			}
-			const size_t Count(void)const
-			{
-				return messageQueue.Count();
-			}
-			const long long Total(void)const
-			{
-				return messageQueue.Total();
-			}
-			const long long Missing(void)const
-			{
-				return messageQueue.Missing();
-			}
 			const xstring GetInfo(void)
 			{
-				return messageQueue.GetInfo() + eventQueue.GetInfo();
+				return eventQueue.GetInfo() + messageQueue.GetInfo();
 			}
 			void Listen(int event, EventListener& listener)
 			{
@@ -49,6 +31,10 @@ namespace Event
 			static MessageQueueManager& GetInstance(void)
 			{
 				static MessageQueueManager instance;return instance;
+			}
+			static MessageQueueManager& CreateInstance(void)
+			{
+				return *(new MessageQueueManager());
 			}
 			typedef map<int,Event>::iterator iterator;
 	};

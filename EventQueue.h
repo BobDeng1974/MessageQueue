@@ -18,9 +18,8 @@ namespace Event
 				Lock();
 				for(iterator i = queue.begin(); i != queue.end(); i++)
 				{
-					s += xstring("\n[%d]{", i->first);
-					s += i->second.GetInfo();
-				    s += xstring("}");
+					s += xstring("\nEvent[%d]", i->first);
+				    s += i->second.GetInfo();
 				}
 				Unlock();
 				return s;

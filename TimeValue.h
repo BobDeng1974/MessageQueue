@@ -1,6 +1,9 @@
 #ifndef __TIMEVALUE_H__
 #define __TIMEVALUE_H__
+#include <string>
+#include <time.h>
 #include <sys/time.h>
+using namespace std;
 
 class TimeValue
 {
@@ -28,7 +31,7 @@ public:
 	{
 		return value.tv_sec / 60;
 	}
-	const time_t Second(void)const
+	const time_t& Second(void)const
 	{
 		return value.tv_sec;
 	}
@@ -69,8 +72,17 @@ public:
 			r.value.tv_sec -= 1;
 			r.value.tv_usec += 1000000;
 		}
-
 		return r;
+	}
+	const string ToString(const char *format)const
+	{
+		char buf[128];
+		struct tm tm;
+
+		gmtime_r(&value.tv_sec, &tm);
+		strftime(buf, sizeof(buf), format, &tm);
+
+		return buf;
 	}
 };
 

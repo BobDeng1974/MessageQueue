@@ -5,30 +5,58 @@
 #include "MessageQueueManager.h"
 using namespace Event;
 
-int event = 0;
-int countx = 0;
-int event_max = 100;
-TimeValue tt;
-MessageQueueManager &manager = MessageQueueManager::GetInstance();
+#define EVENT_MAX	100
+#define THREAD_MAX	20
 
 class Test : public EventListener
 {
 	protected:
 		int id;
+		pthread_t tid;
+		TimeValue time;
+		bool eventmap[EVENT_MAX];
+		MessageQueueManager &manager;
 	public:
-		Test(int n):id(n)
+		Test(int n):id(n),manager(MessageQueueManager::GetInstance())
 		{
+			for(int i = 0; i < EVENT_MAX; i++)
+			{
+				eventmap[i] = false;
+			}
 		}
 		const xstring GetInfo(void)
 		{
 			xstring s;
 			Lock();
-			s.format("Test[%p].total(%lld).missing(%lld).count(%d),", this, total, missing, count);
+			s.format("\n\tListener(%p).thread(%lX).run(%s).total(%lld).count(%d).miss(%lld).listenning(%s){%d}",
+					this, tid, time.ToString("%Y-%m-%d %H:%M:%S").data(), total, count, missing, GetEvents().data(), EventCount());
 			Unlock();
 			return s;
 		}
-		void ProcMessage()
+		int EventCount(void)
 		{
+			int r = 0;
+			for(int i = 0; i < EVENT_MAX; i++)
+			{
+				if(eventmap[i])r++;
+			}
+			return r;
+		}
+		const xstring GetEvents(void)
+		{
+			xstring s;
+			for(int i = 0; i < EVENT_MAX; i++)
+			{
+				if(eventmap[i])
+				{
+					s += xstring("%d,", i);
+				}
+			}
+			return s;
+		}
+		void ProcMessage(void)
+		{
+			xstring s;
 			int dispatch = MESSAGEQUEUE_DISPATCH;
 
 			Lock();
@@ -39,48 +67,16 @@ class Test : public EventListener
 			while(!messageQueue.empty())
 			{
 				Message &message = messageQueue.front();
-				const TimeValue& t = manager.GetTime().Diff();
-
-				if(tt.Diff().Second() > 1 && t.Second() > 0)
-				{
-					tt.Update();
-					printf("listener[%d]"
-							".total(%lld)"
-							".miss(%lld)"
-							".count(%ld)"
-							".thread(%lx,%lx)___"
-							"manager"
-							".total(%lld)"
-							".miss(%lld)"
-							".count(%d)"
-							".speed(%lld)"
-							".time(%d)___"
-							"message"
-							".event(%d)"
-							".buf(%d)\n%s\n\n",
-							this->id,
-							this->total,
-							this->missing,
-							this->count,
-							pthread_self(), 
-							message.id, 
-							manager.Total(), 
-							manager.Missing(), 
-							manager.Count(), 
-							manager.Total()/t.Second(),
-							t.Second(),
-							message.event, 
-							strlen(message.x.buf),
-							message.x.buf);
-				}
+				eventmap[message.event] = true;
 				messageQueue.pop_front();
-				count--;
+				this->count--;
 				if(--dispatch < 1)
-				{
 					break;
-				}
+				for(int i = 0; i < 1000; i++);
 			}
 			Unlock();
+			tid = pthread_self();
+			time.Update();
 		}
 };
 
@@ -88,10 +84,11 @@ void *thread(void *p)
 {
 	Test test(*(int*)p);
 	TimeValue now;
+	MessageQueueManager &manager = MessageQueueManager::GetInstance();
 
-	for(int i = 0; i < event_max; i += random() % 10)
+	for(int i = 0; i < EVENT_MAX; i += (random() % EVENT_MAX/5))
 	{
-		manager.Listen(random() % event_max, test);
+		manager.Listen(random() % EVENT_MAX, test);
 		srandom(now.Diff().Usecond());
 	}
 
@@ -103,7 +100,7 @@ void *thread(void *p)
 		{
 			Message m;
 			m.id = pthread_self();
-			m.event = random()%event_max;
+			m.event = random() % EVENT_MAX;
 			for(int i = 0; i < sizeof(m.x.buf); i++)
 			{
 				m.x.buf[i] = 'A' + i % 26;
@@ -114,21 +111,28 @@ void *thread(void *p)
 			now.Update();
 		}
 		test.ProcMessage();
-		usleep(1000);
+		usleep(200);
 	}
 }
-int thread_max = 20;
 int main(void)
 {
+	TimeValue time;
+	MessageQueueManager &manager = MessageQueueManager::GetInstance();
 
-	for(int i = 0; i < thread_max; i++)
+	for(int i = 0; i < THREAD_MAX; i++)
 	{
-		pthread_t tid = 0;
-		pthread_create(&tid, 0, thread, &i);
+		pthread_t t = pthread_t(-1);
+		pthread_create(&t, 0, thread, &i);
 	}
 	while(1)
 	{
 		manager.Dispatch();
 		usleep(100);
+		if(time.Diff().Second() > 1)
+		{
+			printf("%s", manager.GetInfo().data());
+			fflush(stdout);
+			time.Update();
+		}
 	}
 }

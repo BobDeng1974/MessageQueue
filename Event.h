@@ -15,10 +15,10 @@ namespace Event
 	public:
 		const xstring GetInfo(void)
 		{
-			xstring s("Event[%p]", this);
+			xstring s;
 
 			Lock();
-			s += xstring(".count(%d)", listeners.size());
+			s += xstring(".listeners(%d)", listeners.size());
 			for(iterator i = listeners.begin(); i != listeners.end(); i++)
 			{
 				s += i->first->GetInfo();

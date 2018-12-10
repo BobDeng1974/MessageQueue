@@ -3,6 +3,7 @@
 #include <list>
 #include <cmath>
 #include "Mutex.h"
+#include "TimeValue.h"
 #include "EventQueue.h"
 using namespace std;
 
@@ -14,6 +15,7 @@ namespace Event
 			size_t count;
 			long long total;
 			long long missing;
+			TimeValue time;
 			list<Message> queue;
 		public:
 			MessageQueue():count(0),total(0),missing(0)
@@ -33,11 +35,17 @@ namespace Event
 			}
 			const xstring GetInfo(void)
 			{
-				int size = 0;
-				Lock();
-				size = queue.size();
-				Unlock();
-				return xstring("total(%d),size(%d)", total, size);
+				time_t sec = time.Diff().Second();
+				long long dispatch = (total - count);
+
+				return xstring("\nMessageQueue(%p).count(%d)"
+								".recieve(%lld / %d = %lld/s)"
+								".dispatch(%lld / %d = %lld/s)"
+								".missing(%lld / %d = %lld/s)",
+								this, count,
+								total, sec, total/sec,
+								dispatch, sec, dispatch/sec,
+								missing, sec, missing/sec);
 			}
 			void Push(const Message& m)
 			{
