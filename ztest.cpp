@@ -29,32 +29,53 @@ class Test : public EventListener
 		}
 		void ProcMessage()
 		{
-			int i = 0;
 			int dispatch = MESSAGEQUEUE_DISPATCH;
 
 			Lock();
-			if(count > MESSAGEQUEUE_MAX/3)
+			if(count > MESSAGEQUEUE_MAX/10)
 			{
-				dispatch = count / 10;
+				dispatch = count / 10 + missing / 10;
 			}
 			while(!messageQueue.empty())
 			{
-				Message &m = messageQueue.front();
-				const TimeValue td = tt.Diff();
+				Message &message = messageQueue.front();
+				const TimeValue& t = manager.GetTime().Diff();
 
-				if(td.Second() > 0)
+				if(tt.Diff().Second() > 1 && t.Second() > 0)
 				{
-					xstring s;
-					const TimeValue& t = manager.GetTime().Diff();
-
-					m.buffer[sizeof(m.buffer) - 1] = 0;
-					s.format("manager.total(%lld).missing(%lld).count(%d).runtime(%d).div(%lld)", 
-							manager.Total(), manager.Missing(), manager.Count(), t.Second(), manager.Total()/t.Second());
-					printf("%d.[%lx].m(%lx, %d).%s.%s\n", id, pthread_self(), m.id, m.event, m.buffer, s.data());
 					tt.Update();
+					printf("listener[%d]"
+							".total(%lld)"
+							".miss(%lld)"
+							".count(%ld)"
+							".thread(%lx,%lx)___"
+							"manager"
+							".total(%lld)"
+							".miss(%lld)"
+							".count(%d)"
+							".speed(%lld)"
+							".time(%d)___"
+							"message"
+							".event(%d)"
+							".buf(%d)\n%s\n\n",
+							this->id,
+							this->total,
+							this->missing,
+							this->count,
+							pthread_self(), 
+							message.id, 
+							manager.Total(), 
+							manager.Missing(), 
+							manager.Count(), 
+							manager.Total()/t.Second(),
+							t.Second(),
+							message.event, 
+							strlen(message.x.buf),
+							message.x.buf);
 				}
-				messageQueue.pop_front();count--;
-				if(i++ > dispatch)
+				messageQueue.pop_front();
+				count--;
+				if(--dispatch < 1)
 				{
 					break;
 				}
@@ -83,16 +104,17 @@ void *thread(void *p)
 			Message m;
 			m.id = pthread_self();
 			m.event = random()%event_max;
-			for(int i = 0; i < sizeof(m.buffer); i++)
+			for(int i = 0; i < sizeof(m.x.buf); i++)
 			{
-				m.buffer[i] = 'A' + i % 26;
+				m.x.buf[i] = 'A' + i % 26;
 			}
+			m.x.buf[sizeof(m.x.buf)-1] = 0;
 			srandom(t.Usecond());
 			manager.SendMessage(m);
 			now.Update();
 		}
 		test.ProcMessage();
-		usleep(1);
+		usleep(1000);
 	}
 }
 int thread_max = 20;
@@ -107,6 +129,6 @@ int main(void)
 	while(1)
 	{
 		manager.Dispatch();
-		usleep(1);
+		usleep(100);
 	}
 }

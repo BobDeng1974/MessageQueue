@@ -29,7 +29,7 @@ namespace Event
 		virtual void RecvMessage(const Message& m)
 		{
 			Lock();
-			if(count < MESSAGEQUEUE_MAX)
+			if(count < MESSAGEQUEUE_MAX/3)
 			{
 				messageQueue.push_back(m);
 				total = total + 1LL;

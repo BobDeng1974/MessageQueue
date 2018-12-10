@@ -6,18 +6,41 @@
 
 namespace Event
 {
+	typedef union
+	{
+		char scvalue;
+		short ssvalue;
+		signed int sivalue;
+		signed long int slvalue;
+		signed long long int sllvalue;
+
+		unsigned char ucvalue;
+		unsigned short usvalue;
+		unsigned int uvalue;
+		unsigned long ulvalue;
+		unsigned long long ullvalue;
+
+		float fvalue;
+		double dvalue;
+
+		char buf[256];
+
+		struct{
+			char name[32];
+			int value;
+		}nvalue;
+	}Messagex;
+
 	class Message
 	{
 		public:
 			int event;
-			char buffer[512];
-			xstring data;
 			pthread_t id;
-			map<xstring,xstring> xx;
+			Messagex x;
 		public:
 			Message():id(-1UL),event(-1)
 			{
-				memset(buffer, 'x', sizeof(buffer));
+				memset(x.buf, 'x', sizeof(x.buf));
 			}
 	};
 };
