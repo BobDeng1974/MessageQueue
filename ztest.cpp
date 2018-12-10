@@ -2,66 +2,67 @@
 #include <time.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "TimeValue.h"
-#include "MQManager.h"
+#include "MessageQueueManager.h"
 using namespace Event;
 
-MQManager mq;
 int event = 0;
 int countx = 0;
-
+int event_max = 100;
 TimeValue tt;
+MessageQueueManager &manager = MessageQueueManager::GetInstance();
 
 class Test : public EventListener
 {
 	protected:
 		int id;
-		list<Message> queue;	
 	public:
 		Test(int n):id(n)
 		{
-		}
-		void RecvMessage(const Message& m)
-		{
-			Lock();
-			queue.push_back(m);
-			Unlock();
 		}
 		const xstring GetInfo(void)
 		{
 			xstring s;
 			Lock();
-			s.format("Test[%p].mcount(%d),", this, queue.size());
+			s.format("Test[%p].total(%lld).missing(%lld).count(%d),", this, total, missing, count);
 			Unlock();
 			return s;
 		}
 		void ProcMessage()
 		{
+			int i = 0;
+			int dispatch = MESSAGEQUEUE_DISPATCH;
 
 			Lock();
-			while(!queue.empty())
+			if(count > MESSAGEQUEUE_MAX/3)
 			{
-				Message &m = queue.front();
+				dispatch = count / 10;
+			}
+			while(!messageQueue.empty())
+			{
+				Message &m = messageQueue.front();
 				const TimeValue td = tt.Diff();
 
 				if(td.Second() > 0)
 				{
 					xstring s;
-					const TimeValue& t = mq.GetTime().Diff();
+					const TimeValue& t = manager.GetTime().Diff();
 
 					m.buffer[sizeof(m.buffer) - 1] = 0;
-					s.format("mq.count(%d).runtime(%d).div(%d)", mq.Count(), t.Second(), mq.Count()/t.Second());
+					s.format("manager.total(%lld).missing(%lld).count(%d).runtime(%d).div(%lld)", 
+							manager.Total(), manager.Missing(), manager.Count(), t.Second(), manager.Total()/t.Second());
 					printf("%d.[%lx].m(%lx, %d).%s.%s\n", id, pthread_self(), m.id, m.event, m.buffer, s.data());
 					tt.Update();
 				}
-				queue.pop_front();
+				messageQueue.pop_front();count--;
+				if(i++ > dispatch)
+				{
+					break;
+				}
 			}
 			Unlock();
 		}
-
 };
 
-int event_max = 100;
 void *thread(void *p)
 {
 	Test test(*(int*)p);
@@ -69,7 +70,7 @@ void *thread(void *p)
 
 	for(int i = 0; i < event_max; i += random() % 10)
 	{
-		mq.Listen(random() % event_max, test);
+		manager.Listen(random() % event_max, test);
 		srandom(now.Diff().Usecond());
 	}
 
@@ -87,7 +88,7 @@ void *thread(void *p)
 				m.buffer[i] = 'A' + i % 26;
 			}
 			srandom(t.Usecond());
-			mq.SendMessage(m);
+			manager.SendMessage(m);
 			now.Update();
 		}
 		test.ProcMessage();
@@ -105,7 +106,7 @@ int main(void)
 	}
 	while(1)
 	{
-		mq.Dispatch();
+		manager.Dispatch();
 		usleep(1);
 	}
 }
