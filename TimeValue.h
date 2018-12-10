@@ -9,30 +9,68 @@ protected:
 public:
 	TimeValue(void)
 	{
-		Update();
-	}
-	const time_t Second(void)const
-	{
-		return value.tv_sec;
-	}
-	const time_t Usecond(void)const
-	{
-		return value.tv_usec;
+		this->Update();
 	}
 	bool Update(void)
 	{
 		return gettimeofday(&value, 0)==0;
 	}
-	TimeValue& operator-=(const TimeValue& t)
+public:
+	const time_t Day(void)const
 	{
-		value.tv_sec -= t.value.tv_sec;
-		value.tv_usec -= t.value.tv_usec;
-		if(value.tv_usec < 0)
+		return value.tv_sec / 60 / 60 / 24;
+	}
+	const time_t Hour(void)const
+	{
+		return value.tv_sec / 60 / 60;
+	}
+	const time_t Min(void)const
+	{
+		return value.tv_sec / 60;
+	}
+	const time_t Second(void)const
+	{
+		return value.tv_sec;
+	}
+	const time_t Msecond(void)const
+	{
+		return value.tv_usec / 1000;
+	}
+	const time_t Usecond(void)const
+	{
+		return value.tv_usec;
+	}
+	const long long Mdiff(void)const
+	{
+		long long sec = sec = value.tv_sec;
+		long long usec = usec = value.tv_usec;
+		return sec * 1000LL + usec / 1000LL;
+	}
+	const long long Udiff(void)const
+	{
+		long long sec = sec = value.tv_sec;
+		long long usec = usec = value.tv_usec;
+		return usec + sec * 1000000LL;
+	}
+	const TimeValue Diff(void)const
+	{
+		TimeValue now;
+		return (now - *this);
+	}
+	const TimeValue operator-(const TimeValue& t)const
+	{
+		TimeValue r;
+
+		r.value.tv_sec = value.tv_sec - t.value.tv_sec;
+		r.value.tv_usec = value.tv_usec - t.value.tv_usec;
+
+		if(r.value.tv_usec < 0)
 		{
-			value.tv_sec -= 1;
-			value.tv_usec += 1000000;
+			r.value.tv_sec -= 1;
+			r.value.tv_usec += 1000000;
 		}
-		return *this;
+
+		return r;
 	}
 };
 

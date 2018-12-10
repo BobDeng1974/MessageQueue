@@ -10,11 +10,14 @@ namespace Event
 	{
 		public:
 			int event;
+			char buffer[512];
 			xstring data;
 			pthread_t id;
+			map<xstring,xstring> xx;
 		public:
 			Message():id(-1UL),event(-1)
 			{
+				memset(buffer, 'x', sizeof(buffer));
 			}
 	};
 };

@@ -1,6 +1,6 @@
 #ifndef __EVENT_MQMANAGER_H__
 #define __EVENT_MQMANAGER_H__
-#include "TimeDiff.h"
+#include "TimeValue.h"
 #include "EventQueue.h"
 #include "MessageQueue.h"
 
@@ -9,13 +9,13 @@ namespace Event
 	class MQManager : public Mutex
 	{
 		protected:
-			TimeDiff timediff;
+			TimeValue time;
 			EventQueue equeue;
 			MessageQueue mqueue;
 		public:
-			const time_t DiffTime(void)const
+			const TimeValue& GetTime(void)const
 			{
-				return timediff.Diff();
+				return time;
 			}
 			const size_t Count(void)const
 			{

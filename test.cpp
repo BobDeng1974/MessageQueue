@@ -10,13 +10,17 @@ MQManager mq;
 int event = 0;
 int countx = 0;
 
-TimeDiff td;
+TimeValue tt;
 
 class Test : public EventListener
 {
 	protected:
+		int id;
 		list<Message> queue;	
 	public:
+		Test(int n):id(n)
+		{
+		}
 		void RecvMessage(const Message& m)
 		{
 			Lock();
@@ -33,20 +37,22 @@ class Test : public EventListener
 		}
 		void ProcMessage()
 		{
-			xstring s;
 
-		   if( td.Diff() > 1000000)
-		   {
-			  s.format("mq.count(%d).timediff(%d).div(%d)", mq.Count(), mq.DiffTime(), mq.Count()/(mq.DiffTime()/1000000));
-		   }
 			Lock();
 			while(!queue.empty())
 			{
 				Message &m = queue.front();
-				if(td.Diff() > 1000000 && s.length() > 10)
+				const TimeValue td = tt.Diff();
+
+				if(td.Second() > 0)
 				{
-					printf("[%lx].m(%lx, %d).%s.%s\n", pthread_self(), m.id, m.event, m.data.data(), s.data());
-					td.Update();
+					xstring s;
+					const TimeValue& t = mq.GetTime().Diff();
+
+					m.buffer[sizeof(m.buffer) - 1] = 0;
+					s.format("mq.count(%d).runtime(%d).div(%d)", mq.Count(), t.Second(), mq.Count()/t.Second());
+					printf("%d.[%lx].m(%lx, %d).%s.%s\n", id, pthread_self(), m.id, m.event, m.buffer, s.data());
+					tt.Update();
 				}
 				queue.pop_front();
 			}
@@ -58,28 +64,31 @@ class Test : public EventListener
 int event_max = 100;
 void *thread(void *p)
 {
-	Test test;
-	TimeValue last;
+	Test test(*(int*)p);
+	TimeValue now;
 
 	for(int i = 0; i < event_max; i += random() % 10)
 	{
 		mq.Listen(random() % event_max, test);
-		srandom(last.Usecond());
+		srandom(now.Diff().Usecond());
 	}
 
 	while(1)
 	{
-		TimeValue now;
-		if( (now -= last).Usecond() > 1)
+		const TimeValue t = now.Diff();
+
+		if( t.Usecond() > 1)
 		{
 			Message m;
 			m.id = pthread_self();
 			m.event = random()%event_max;
-			m.data = "jjjjjjjjjjjjjjjjjjjjjjjjjjlajflajfkajfljasdlfjalskdfjafjkajflajsdlfkjaslkdfjjkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk88888";
-			TimeValue now;
-			srandom(now.Usecond());
+			for(int i = 0; i < sizeof(m.buffer); i++)
+			{
+				m.buffer[i] = 'A' + i % 26;
+			}
+			srandom(t.Usecond());
 			mq.SendMessage(m);
-			last.Update();
+			now.Update();
 		}
 		test.ProcMessage();
 		usleep(1);
@@ -92,7 +101,7 @@ int main(void)
 	for(int i = 0; i < thread_max; i++)
 	{
 		pthread_t tid = 0;
-		pthread_create(&tid, 0, thread, 0);
+		pthread_create(&tid, 0, thread, &i);
 	}
 	while(1)
 	{
