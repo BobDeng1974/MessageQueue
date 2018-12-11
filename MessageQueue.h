@@ -15,11 +15,13 @@ namespace Event
 			size_t count;
 			long long total;
 			long long missing;
+			long long event[EVENT_MAX];
 			TimeValue time;
 			list<Message> queue;
 		public:
 			MessageQueue():count(0),total(0),missing(0)
 			{
+				memset(event, 0, sizeof(event));
 			}
 			const size_t Count(void)const
 			{
@@ -35,23 +37,35 @@ namespace Event
 			}
 			const xstring GetInfo(void)
 			{
+				xstring s;
+				int lineoff = 0;
 				time_t sec = time.Diff().Second();
 				long long dispatch = (total - count);
 
-				return xstring("\nMessageQueue(%p).count(%d)"
-								".recieve(%lld / %d = %lld/s)"
-								".dispatch(%lld / %d = %lld/s)"
-								".missing(%lld / %d = %lld/s)",
-								this, count,
-								total, sec, total/sec,
-								dispatch, sec, dispatch/sec,
-								missing, sec, missing/sec);
+				s += xstring("\nMessageQueue(%p).count(%d)", this, count);
+				s += xstring(".recieve(%lld / %d = %lld/s)", total, sec, total/sec);
+				s += xstring(".dispatch(%lld / %d = %lld/s)", dispatch, sec, dispatch/sec);
+				s += xstring(".missing(%lld / %d = %lld/s)",  missing, sec, missing/sec);
+				for(int i = 0; i < EVENT_MAX; i++)
+				{
+					int x = (i/10 + i*10) % EVENT_MAX;
+					if(event[x])
+					{
+						if( (lineoff++ % 10) == 0 )
+						{
+							s += "\n\t";
+						}
+						s += xstring("[%2d->%-8lld], ", x, event[x]);
+					}
+				}
+				return s;
 			}
 			void Push(const Message& m)
 			{
 				Lock();
 				if(count < MESSAGEQUEUE_MAX)
 				{
+					event[ (m.event % EVENT_MAX) ]++;
 					queue.push_back(m);	
 					total = total + 1LL;
 					count++;

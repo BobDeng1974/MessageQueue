@@ -5,6 +5,10 @@
 #include "Mutex.h"
 #include "Message.h"
 
+#ifndef EVENT_MAX
+#define EVENT_MAX 100
+#endif//EVENT_MAX
+
 #ifndef MESSAGEQUEUE_MAX
 #define MESSAGEQUEUE_MAX 20000
 #endif//MESSAGEQUEUE_MAX
@@ -15,33 +19,62 @@
 
 namespace Event
 {
-	class EventListener : public Mutex
+	class EventListener : Mutex
 	{
 	protected:
 		size_t count;
 		long long total;
 		long long missing;
+		size_t eventmap[EVENT_MAX];
 		list<Message> messageQueue;
 	public:
 		EventListener(void):count(0),total(0),missing(0)
 		{
+			memset(eventmap, 0, sizeof(eventmap));
 		}
-		virtual void RecvMessage(const Message& m)
+		void RecvMessage(const Message& m)
 		{
-			Lock();
+			this->Lock();
 			if(count < MESSAGEQUEUE_MAX/3)
 			{
 				messageQueue.push_back(m);
 				total = total + 1LL;
-				count++;
+				count = count + 0x1;
 			}
 			else
 			{
 				missing = missing + 1LL;
 			}
-			Unlock();
+			this->Unlock();
+		}
+		void Dispatch(void)
+		{
+			int dispatch = 0;
+
+			this->Lock();
+			dispatch = count % MESSAGEQUEUE_DISPATCH;
+			if(count > MESSAGEQUEUE_MAX/9)
+			{
+				dispatch += count / 3;
+			}
+			this->Unlock();
+
+			for(int i = 0; i < dispatch; i++)
+			{
+				Message message;
+
+				this->Lock();
+				message = messageQueue.front();
+				eventmap[ (message.event % EVENT_MAX) ]++;
+				this->messageQueue.pop_front();
+				this->count = this->count - 1;
+				this->Unlock();
+				ProccessMessage(message);
+			}
 		}
 		virtual const xstring GetInfo(void)=0;
+	protected:
+		virtual void ProccessMessage(const Message& m)=0;
 	};
 }
 

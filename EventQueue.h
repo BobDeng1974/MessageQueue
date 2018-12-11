@@ -11,14 +11,19 @@ namespace Event
 	{
 		protected:
 			map<int,Event> queue;
+			long long count[EVENT_MAX];
 		public:
+			EventQueue(void)
+			{
+				memset(count, 0, sizeof(count));
+			}
 			const xstring GetInfo(void)
 			{
 				xstring s;
 				Lock();
 				for(iterator i = queue.begin(); i != queue.end(); i++)
 				{
-					s += xstring("\nEvent[%d]", i->first);
+					s += xstring("\nEvent[%d].count(%lld)", i->first, count[ (i->first % EVENT_MAX) ]);
 				    s += i->second.GetInfo();
 				}
 				Unlock();
@@ -27,7 +32,7 @@ namespace Event
 			void Listen(int event, EventListener& listener)
 			{
 				Lock();
-				queue[event].Listen(listener);
+				queue[ (event % EVENT_MAX) ].Listen(listener);
 				Unlock();
 			}
 			void Dispatch(Message& m)

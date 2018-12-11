@@ -14,23 +14,38 @@ class Test : public EventListener
 		int id;
 		pthread_t tid;
 		TimeValue time;
-		bool eventmap[EVENT_MAX];
 		MessageQueueManager &manager;
 	public:
-		Test(int n):id(n),manager(MessageQueueManager::GetInstance())
+		Test():id(0),manager(MessageQueueManager::GetInstance())
 		{
 			for(int i = 0; i < EVENT_MAX; i++)
 			{
-				eventmap[i] = false;
+				eventmap[i] = 0;
 			}
+		}
+		void SetId(int iid)
+		{
+			this->id = iid;
 		}
 		const xstring GetInfo(void)
 		{
 			xstring s;
-			Lock();
-			s.format("\n\tListener(%p).thread(%lX).run(%s).total(%lld).count(%d).miss(%lld).listenning(%s){%d}",
-					this, tid, time.ToString("%Y-%m-%d %H:%M:%S").data(), total, count, missing, GetEvents().data(), EventCount());
-			Unlock();
+			s.format("\n\t"
+					"Listener(%p)"
+					".thread(%lX)"
+					".run(%s)"
+					".total(%lld)"
+					".count(%d)"
+					".miss(%lld)"
+					".events(%d):"
+					"{%s}",
+					this, 
+					tid, 
+					time.ToString("%Y-%m-%d %H:%M:%S").data(), total, 
+					count, 
+					missing, 
+					EventCount(),
+					GetEvents().data());
 			return s;
 		}
 		int EventCount(void)
@@ -54,43 +69,24 @@ class Test : public EventListener
 			}
 			return s;
 		}
-		void ProcMessage(void)
+		void ProccessMessage(const Message& message)
 		{
-			xstring s;
-			int dispatch = MESSAGEQUEUE_DISPATCH;
-
-			Lock();
-			if(count > MESSAGEQUEUE_MAX/10)
-			{
-				dispatch = count / 10 + missing / 10;
-			}
-			while(!messageQueue.empty())
-			{
-				Message &message = messageQueue.front();
-				eventmap[message.event] = true;
-				messageQueue.pop_front();
-				this->count--;
-				if(--dispatch < 1)
-					break;
-				for(int i = 0; i < 1000; i++);
-			}
-			Unlock();
-			tid = pthread_self();
-			time.Update();
+			for(int i = 0; i < 1000; i++);
 		}
 };
 
 void *thread(void *p)
 {
-	Test test(*(int*)p);
+	Test test;
 	TimeValue now;
 	MessageQueueManager &manager = MessageQueueManager::GetInstance();
 
 	for(int i = 0; i < EVENT_MAX; i += (random() % EVENT_MAX/5))
 	{
 		manager.Listen(random() % EVENT_MAX, test);
-		srandom(now.Diff().Usecond());
+		srandom(now.Diff().Usecond() + random());
 	}
+	test.SetId( *(int*)p );
 
 	while(1)
 	{
@@ -106,12 +102,12 @@ void *thread(void *p)
 				m.x.buf[i] = 'A' + i % 26;
 			}
 			m.x.buf[sizeof(m.x.buf)-1] = 0;
-			srandom(t.Usecond());
+			//srandom(t.Usecond());
 			manager.SendMessage(m);
 			now.Update();
 		}
-		test.ProcMessage();
-		usleep(200);
+		test.Dispatch();
+		usleep(150);
 	}
 }
 int main(void)

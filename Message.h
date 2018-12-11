@@ -34,7 +34,7 @@ namespace Event
 	class Message
 	{
 		public:
-			int event;
+			unsigned event;
 			pthread_t id;
 			Messagex x;
 		public:
