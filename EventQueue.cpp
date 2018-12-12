@@ -16,7 +16,7 @@ const xstring EventQueue::GetInfo(void)
 	Unlock();
 	return s;
 }
-void EventQueue::Listen(int event, EventListener& listener)
+void EventQueue::Listen(unsigned event, EventListener& listener)
 {
 	Lock();
 	queue[ (event % EVENT_MAX) ].Listen(listener);

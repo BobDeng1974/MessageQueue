@@ -8,14 +8,14 @@ using namespace std;
 class EventQueue : public Mutex
 {
 	protected:
-		map<int,Event> queue;
 		long long count[EVENT_MAX];
+		map<unsigned, class Event> queue;
 	public:
 		EventQueue(void);
 		void Dispatch(Message&);
 		const xstring GetInfo(void);
-		void Listen(int, EventListener&);
-		typedef map<int,Event>::iterator iterator;
+		void Listen(unsigned, EventListener&);
+		typedef map<unsigned, class Event>::iterator iterator;
 };
 
 #endif//__EVENT_QUEUE_H__

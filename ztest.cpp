@@ -62,8 +62,8 @@ int main(void)
 	}
 	while(1)
 	{
-		manager.Dispatch();
 		usleep(100);
+		manager.Dispatch();
 		if(time.Diff().Second() > 1)
 		{
 			printf("%s", manager.GetInfo().data());
