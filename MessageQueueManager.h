@@ -3,41 +3,39 @@
 #include "EventQueue.h"
 #include "MessageQueue.h"
 
-namespace Event
+class MessageQueueManager : public Mutex
 {
-	class MessageQueueManager : public Mutex
-	{
-		protected:
-			EventQueue eventQueue;
-			MessageQueue messageQueue;
-			MessageQueueManager(void){}
-		public:
-			const xstring GetInfo(void)
-			{
-				return eventQueue.GetInfo() + messageQueue.GetInfo();
-			}
-			void Listen(int event, EventListener& listener)
-			{
-				eventQueue.Listen(event, listener);
-			}
-			void SendMessage(const Message& m)
-			{
-				messageQueue.Push(m);
-			}
-			void Dispatch(void)
-			{
-				messageQueue.Dispatch(eventQueue);
-			}
-			static MessageQueueManager& GetInstance(void)
-			{
-				static MessageQueueManager instance;return instance;
-			}
-			static MessageQueueManager& CreateInstance(void)
-			{
-				return *(new MessageQueueManager());
-			}
-			typedef map<int,Event>::iterator iterator;
-	};
+	protected:
+		EventQueue eventQueue;
+		MessageQueue messageQueue;
+		MessageQueueManager(void){}
+	public:
+		const xstring GetInfo(void)
+		{
+			return eventQueue.GetInfo()
+				 + messageQueue.GetInfo();
+		}
+		void Dispatch(void)
+		{
+			messageQueue.Dispatch(eventQueue);
+		}
+		void Listen(int e, EventListener& l)
+		{
+			eventQueue.Listen(e, l);
+		}
+		void SendMessage(const Message& message)
+		{
+			messageQueue.Push(message);
+		}
+		static MessageQueueManager& GetInstance(void)
+		{
+			static MessageQueueManager i; return i;
+		}
+		static MessageQueueManager* CreateInstance(void)
+		{
+			return new MessageQueueManager();
+		}
+		typedef map<int,Event>::iterator iterator;
 };
 
 #endif//__EVENT_MESSAGEQUEUEMANAGER_H__

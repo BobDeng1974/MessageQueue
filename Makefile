@@ -1,8 +1,8 @@
 powerpc:
-	powerpc-e300c3-linux-gnu-g++ ztest.cpp -lpthread -lm
+	powerpc-e300c3-linux-gnu-g++ *.cpp -lpthread -lm
 arm:
-	arm-linux-g++ ztest.cpp -lpthread -lm
+	arm-linux-g++ *.cpp -lpthread -lm
 pc:
-	g++ ztest.cpp -lpthread -lm -g
+	g++ *.cpp -lpthread -lm -g -O3
 clean:
 	rm -rf a.out

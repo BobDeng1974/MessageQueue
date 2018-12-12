@@ -7,98 +7,24 @@
 #include "EventQueue.h"
 using namespace std;
 
-namespace Event
+class MessageQueue : public Mutex 
 {
-	class MessageQueue : public Mutex 
-	{
-		protected:
-			size_t count;
-			long long total;
-			long long missing;
-			long long event[EVENT_MAX];
-			TimeValue time;
-			list<Message> queue;
-		public:
-			MessageQueue():count(0),total(0),missing(0)
-			{
-				memset(event, 0, sizeof(event));
-			}
-			const size_t Count(void)const
-			{
-				return count;
-			}
-			const long long Total(void)const
-			{
-				return total;
-			}
-			const long long Missing(void)const
-			{
-				return missing;
-			}
-			const xstring GetInfo(void)
-			{
-				xstring s;
-				int lineoff = 0;
-				time_t sec = time.Diff().Second();
-				long long dispatch = (total - count);
-
-				s += xstring("\nMessageQueue(%p).count(%d)", this, count);
-				s += xstring(".recieve(%lld / %d = %lld/s)", total, sec, total/sec);
-				s += xstring(".dispatch(%lld / %d = %lld/s)", dispatch, sec, dispatch/sec);
-				s += xstring(".missing(%lld / %d = %lld/s)",  missing, sec, missing/sec);
-				for(int i = 0; i < EVENT_MAX; i++)
-				{
-					int x = (i/10 + i*10) % EVENT_MAX;
-					if(event[x])
-					{
-						if( (lineoff++ % 10) == 0 )
-						{
-							s += "\n\t";
-						}
-						s += xstring("[%2d->%-8lld], ", x, event[x]);
-					}
-				}
-				return s;
-			}
-			void Push(const Message& m)
-			{
-				Lock();
-				if(count < MESSAGEQUEUE_MAX)
-				{
-					event[ (m.event % EVENT_MAX) ]++;
-					queue.push_back(m);	
-					total = total + 1LL;
-					count++;
-				}
-				else
-				{
-					missing = missing +1LL;
-				}
-				Unlock();
-			}
-			void Dispatch(EventQueue& equeue)
-			{
-				int i = 0;
-				int dispatch = MESSAGEQUEUE_DISPATCH;
-
-				Lock();
-				if(count > MESSAGEQUEUE_MAX/3)
-				{
-					dispatch = count / 10 + missing / 10;
-				}
-				while(!queue.empty())
-				{
-					equeue.Dispatch( queue.front() );
-					this->queue.pop_front();count--;
-					if(i++ > dispatch)
-					{
-						break;
-					}
-				}
-				Unlock();
-			}
-			typedef list<Message>::iterator iterator;
-	};
+	protected:
+		size_t			count;
+		long long		total;
+		long long		miss;
+		long long		event[EVENT_MAX];
+		TimeValue		time;
+		list<Message>	queue;
+	public:
+		MessageQueue(void);
+		const size_t Count(void)const;
+		const long long Total(void)const;
+		const long long Missing(void)const;
+		const xstring GetInfo(void);
+		void Push(const Message&);
+		void Dispatch(EventQueue&);
+		typedef list<Message>::iterator iterator;
 };
 
 #endif//__EVENT_QUEUE_H__
